@@ -1,21 +1,24 @@
 from http import HTTPStatus
-from re import match
+from string import ascii_letters, digits
 
 from flask import jsonify, request
 
-from . import app, db
+from . import app
 from .error_handlers import InvalidAPIUsage
 from .models import URL_map
-from .views import get_unique_short_id
+
+
+SHORT_LENGTH = 6
 
 
 @app.route('/api/id/<string:short_id>/')
 def get_url(short_id):
-    url_map = URL_map.query.filter_by(short=short_id).first()
-    if not url_map:
+    url_map = URL_map()
+    link = url_map.original_link(short=short_id)
+    if not link:
         raise InvalidAPIUsage(
             'Указанный id не найден', HTTPStatus.NOT_FOUND)
-    return jsonify({'url': url_map.original})
+    return jsonify({'url': link.original})
 
 
 @app.route('/api/id/', methods=['POST'])
@@ -25,22 +28,18 @@ def add_url_map():
         raise InvalidAPIUsage('Отсутствует тело запроса')
     if 'url' not in data:
         raise InvalidAPIUsage('"url" является обязательным полем!')
-    if not data.get('custom_id'):
-        data['custom_id'] = get_unique_short_id()
-    if URL_map.query.filter_by(short=data['custom_id']).first():
-        raise InvalidAPIUsage(
-            f'Имя "{data["custom_id"]}" уже занято.'
-        )
-    if not match(
-            r'^[a-z]+://[^\/\?:]+(:[0-9]+)?(\/.*?)?(\?.*)?$',
-            data['url']
-    ):
-        raise InvalidAPIUsage('Недопустимый URL')
-    if not match(r'^[A-Za-z0-9]{1,16}$', data['custom_id']):
-        raise InvalidAPIUsage(
-            'Указано недопустимое имя для короткой ссылки')
+    output_data = [data['url']]
     url_map = URL_map()
-    url_map.from_dict(data)
-    db.session.add(url_map)
-    db.session.commit()
+    print(data)
+    if ('custom_id' in data and
+       data['custom_id'] != '' and
+       data['custom_id'] is not None):
+        custom_id = data['custom_id']
+        for symbol in custom_id:
+            if (symbol not in (ascii_letters + digits) or
+               len(custom_id) > SHORT_LENGTH):
+                raise InvalidAPIUsage(
+                    'Указано недопустимое имя для короткой ссылки')
+        output_data.append(data['custom_id'])
+    url_map.create_short_url(*output_data)
     return jsonify(url_map.to_dict()), HTTPStatus.CREATED

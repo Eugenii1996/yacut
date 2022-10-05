@@ -1,36 +1,31 @@
-import random
-import string
+from http import HTTPStatus
 
-from flask import flash, redirect, render_template, url_for
+from flask import redirect, render_template
+from werkzeug.exceptions import NotFound
 
-from . import app, db
+from . import app
 from .forms import URL_mapForm
 from .models import URL_map
-
-
-def get_unique_short_id():
-    return ''.join(random.choice(
-        string.ascii_letters + string.digits
-    ) for i in range(6))
 
 
 @app.route('/', methods=['GET', 'POST'])
 def index_view():
     form = URL_mapForm()
-    if form.validate_on_submit():
-        short = form.custom_id.data or get_unique_short_id()
-        url_map = URL_map(
-            original=form.original_link.data,
-            short=short
-        )
-        db.session.add(url_map)
-        db.session.commit()
-        flash(url_for('url_map_view', short=short, _external=True))
-    return render_template('index.html', form=form)
+    url_map = URL_map()
+    if not form.validate_on_submit():
+        return render_template('index.html', form=form)
+    url_map.create_short_url(form.original_link.data, form.custom_id.data)
+    return render_template(
+        'index.html',
+        **{'form': form, 'url_map': url_map}
+    )
 
 
 @app.route('/<string:short>')
 def url_map_view(short):
-    return redirect(
-        URL_map.query.filter_by(short=short).first_or_404().original
-    )
+    url_map = URL_map()
+    link = url_map.original_link(short=short)
+    if not link:
+        raise NotFound(
+            'Указанный id не найден', HTTPStatus.NOT_FOUND)
+    return redirect(link.original)
