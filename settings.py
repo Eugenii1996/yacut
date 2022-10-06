@@ -10,5 +10,3 @@ class Config(object):
     ORIGINAL_LEGTH = 2000
     SHORT_LENGTH = 16
     RANDOM_SHORT_LENGTH = 6
-    
-
