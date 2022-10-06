@@ -38,8 +38,6 @@
     <div class="container">
       <div class="row ">
         <div class="col-sm">
-        </div>
-        <div class="col-sm">
           <p class="text-center">
             <h5 class="text-center">
               {% if url_map %}
@@ -50,8 +48,15 @@
               {% endif %}
             </h5>
           </p>
-        </div>
-        <div class="col-sm">
+          <p class="py-3 mb-3">
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                {% for message in messages %}
+                  {{ message }}
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+          </p>
         </div>
       </div>
     </div>

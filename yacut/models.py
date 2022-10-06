@@ -1,9 +1,9 @@
 import random
 from datetime import datetime
-from string import ascii_letters, digits
 
 from flask import url_for
 
+from . import app
 from yacut import db
 from .error_handlers import InvalidAPIUsage
 
@@ -20,30 +20,39 @@ class URL_map(db.Model):
             short_link=url_for(
                 'url_map_view', short=self.short, _external=True))
 
-    def from_dict(self, data):
-        setattr(self, 'original', data['url'])
-        setattr(self, 'short', data['custom_id'])
-
-    def get_unique_short_id(self,
-                            symbols=ascii_letters + digits,
-                            id_length=6):
-        random_value = ''.join(random.choice(symbols)
-                               for _ in range(id_length))
-        if URL_map.query.filter_by(short=random_value).first() is None:
-            setattr(self, 'short', random_value)
-
-    def create_short_url(self, original=None, short=None):
-        if original == '' or original is None:
-            raise ValueError('Отсутствует URL!')
-        setattr(self, 'original', original)
-        if short == '' or short is None:
+    def get_unique_short_id(
+        self,
+        symbols=app.config['VALID_SYMBOLS'],
+        short_length=app.config['RANDOM_SHORT_LENGTH']
+    ):
+        random_value = ''.join(random.choices(symbols, k=short_length))
+        if URL_map.original_link(random_value):
             self.get_unique_short_id()
+        return random_value
+
+    @staticmethod
+    def create_short_url(original, short=None):
+        url_map = URL_map()
+        if short == '' or short is None:
+            url_map.short = url_map.get_unique_short_id()
         else:
+            for symbol in short:
+                if (symbol not in app.config['VALID_SYMBOLS'] or
+                   len(short) > app.config['SHORT_LENGTH']):
+                    raise InvalidAPIUsage(
+                        'Указано недопустимое имя для короткой ссылки')
             if URL_map.query.filter_by(short=short).first():
                 raise InvalidAPIUsage(f'Имя "{short}" уже занято.')
-            setattr(self, 'short', short)
-        db.session.add(self)
+            url_map.short = short
+        url_map.original = original
+        db.session.add(url_map)
         db.session.commit()
+        return url_map
 
-    def original_link(self, short):
+    @staticmethod
+    def original_link(short):
         return URL_map.query.filter_by(short=short).first()
+
+    @staticmethod
+    def original_link_or_404(short):
+        return URL_map.query.filter_by(short=short).first_or_404().original

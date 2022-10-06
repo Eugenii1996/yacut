@@ -1,21 +1,18 @@
-from string import ascii_letters, digits
-
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, URLField
 from wtforms.validators import (DataRequired, Length,
                                 Optional, Regexp,
                                 URL, ValidationError)
 
+from . import app
 from .models import URL_map
 
 
-MAX_LEGTH_ORIGINAL = 2000
-MAX_LEGTH_CUSTOM = 16
-SYMBOLS = ascii_letters + digits
-REQUIRED_FIELD = 'Обязательное поле'
+CREATE = 'Создать'
 INVALID_URL = 'Некорректный URL'
-VALID_CHARACTERS = 'Допустимые символы [A-Za-z0-9]'
 NAME_USED = 'Имя {name} уже занято!'
+REQUIRED_FIELD = 'Обязательное поле'
+VALID_CHARACTERS = 'Допустимые символы [A-Za-z0-9]'
 
 
 class URL_mapForm(FlaskForm):
@@ -23,24 +20,24 @@ class URL_mapForm(FlaskForm):
         'Длинная ссылка',
         validators=[
             DataRequired(message=REQUIRED_FIELD),
-            Length(max=MAX_LEGTH_ORIGINAL),
+            Length(max=app.config['ORIGINAL_LEGTH']),
             URL(require_tld=True, message=INVALID_URL)
         ]
     )
     custom_id = StringField(
         'Ваш вариант короткой ссылки',
         validators=[
-            Length(max=MAX_LEGTH_CUSTOM),
+            Length(max=app.config['SHORT_LENGTH']),
             Optional(),
             Regexp(
-                rf'^[{SYMBOLS}]+$',
+                # Не нашел как экранировать символы передаваемой константы
+                rf'^[{app.config["VALID_SYMBOLS"]}]+$',
                 message=VALID_CHARACTERS
             )
         ]
     )
-    submit = SubmitField('Создать')
+    submit = SubmitField(CREATE)
 
     def validate_custom_id(self, field):
-        url_map = URL_map()
-        if field.data and url_map.original_link(short=field.data):
+        if field.data and URL_map.original_link(field.data):
             raise ValidationError(NAME_USED.format(name=field.data))
