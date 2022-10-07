@@ -1,5 +1,5 @@
 import random
-from re import search
+from re import escape, sub
 from datetime import datetime
 
 from flask import url_for
@@ -12,6 +12,15 @@ from .constants import (
 )
 from yacut import db
 from .error_handlers import InvalidAPIUsage
+
+
+NAME_USED = 'Имя "{name}" уже занято.'
+NOT_FIND_SHORT_URL = 'Не удалось подобрать короткий url!'
+WRONG_SYMBOLS = 'Неподходящие символы: {symbols}'
+WRONG_SHORT_LENGTH = (
+    'Размер короткой ссылки {short_length} '
+    'больше допустимого {short_max}'
+)
 
 
 class URL_map(db.Model):
@@ -35,24 +44,28 @@ class URL_map(db.Model):
             random_value = ''.join(random.choices(symbols, k=short_length))
             if not URL_map.original_link(random_value):
                 return random_value
+        raise ValueError(NOT_FIND_SHORT_URL)
 
     @staticmethod
-    def create_short_url(original, short=None):
+    def create_short_url(original, short=None, validated_form=False):
         if short == '' or short is None:
             short = URL_map.get_unique_short_id()
         else:
-            symbols = ''
-            for symbol in short:
-                if not search(rf'^[{VALID_SYMBOLS}]+$', symbol):
-                    symbols += symbol
-            if not search(rf'^[{VALID_SYMBOLS}]+$', short):
-                raise ValueError(f'Неподходящие символы: {" ".join(symbols)}')
-            if len(short) > SHORT_LENGTH:
-                raise ValueError(
-                    f'Размер короткой ссылки {len(short)} больше допустимого {SHORT_LENGTH}'
-                )
-            if URL_map.original_link(short):
-                raise InvalidAPIUsage(f'Имя "{short}" уже занято.')
+            if not validated_form:
+                if len(short) > SHORT_LENGTH:
+                    raise ValueError(
+                        WRONG_SHORT_LENGTH.format(
+                            short_length=len(short),
+                            short_max=SHORT_LENGTH
+                        )
+                    )
+                wrong_symbols = sub(rf'[{escape(VALID_SYMBOLS)}]', '', short)
+                if wrong_symbols != '':
+                    raise ValueError(
+                        WRONG_SYMBOLS.format(symbols=" ".join(set(wrong_symbols)))
+                    )
+                if URL_map.original_link(short):
+                    raise InvalidAPIUsage(NAME_USED.format(name=short))
         url_map = URL_map(original=original, short=short)
         db.session.add(url_map)
         db.session.commit()

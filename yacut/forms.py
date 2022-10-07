@@ -1,3 +1,5 @@
+from re import escape
+
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, URLField
 from wtforms.validators import (DataRequired, Length,
@@ -32,7 +34,7 @@ class URL_mapForm(FlaskForm):
             Length(max=SHORT_LENGTH),
             Optional(),
             Regexp(
-                rf'^[{VALID_SYMBOLS}]+$',
+                rf'^[{escape(VALID_SYMBOLS)}]+$',
                 message=VALID_CHARACTERS
             )
         ]

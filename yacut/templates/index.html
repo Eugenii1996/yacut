@@ -40,10 +40,10 @@
         <div class="col-sm">
           <p class="text-center">
             <h5 class="text-center">
-              {% if url_map %}
+              {% if short %}
                 Ваша новая ссылка готова: </br>
-                <a href="{{ url_for('url_map_view', short=url_map.short, _external=True) }}">
-                  {{ url_for('url_map_view', short=url_map.short, _external=True) }}
+                <a href="{{ url_for('url_map_view', short=short, _external=True) }}">
+                  {{ url_for('url_map_view', short=short, _external=True) }}
                 </a>
               {% endif %}
             </h5>
@@ -52,7 +52,9 @@
             {% with messages = get_flashed_messages() %}
               {% if messages %}
                 {% for message in messages %}
-                  {{ message }}
+                  <h5 class="text-center">
+                    {{ message }}
+                  </h5>
                 {% endfor %}
               {% endif %}
             {% endwith %}
