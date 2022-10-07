@@ -50,22 +50,21 @@ class URL_map(db.Model):
     def create_short_url(original, short=None, validated_form=False):
         if short == '' or short is None:
             short = URL_map.get_unique_short_id()
-        else:
-            if not validated_form:
-                if len(short) > SHORT_LENGTH:
-                    raise ValueError(
-                        WRONG_SHORT_LENGTH.format(
-                            short_length=len(short),
-                            short_max=SHORT_LENGTH
-                        )
+        elif not validated_form:
+            if len(short) > SHORT_LENGTH:
+                raise ValueError(
+                    WRONG_SHORT_LENGTH.format(
+                        short_length=len(short),
+                        short_max=SHORT_LENGTH
                     )
-                wrong_symbols = sub(rf'[{escape(VALID_SYMBOLS)}]', '', short)
-                if wrong_symbols != '':
-                    raise ValueError(
-                        WRONG_SYMBOLS.format(symbols=" ".join(set(wrong_symbols)))
-                    )
-                if URL_map.original_link(short):
-                    raise InvalidAPIUsage(NAME_USED.format(name=short))
+                )
+            wrong_symbols = sub(rf'[{escape(VALID_SYMBOLS)}]', '', short)
+            if wrong_symbols != '':
+                raise ValueError(
+                    WRONG_SYMBOLS.format(symbols=" ".join(set(wrong_symbols)))
+                )
+            if URL_map.original_link(short):
+                raise InvalidAPIUsage(NAME_USED.format(name=short))
         url_map = URL_map(original=original, short=short)
         db.session.add(url_map)
         db.session.commit()
