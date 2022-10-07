@@ -24,8 +24,8 @@ def add_url_map():
     if 'url' not in data:
         raise InvalidAPIUsage('"url" является обязательным полем!')
     original = data['url']
-    if 'custom_id' in data:
-        url_map = URL_map.create_short_url(original, data['custom_id'])
-    else:
-        url_map = URL_map.create_short_url(original)
+    try:
+        url_map = URL_map.create_short_url(original, data.get('custom_id'))
+    except ValueError:
+        raise InvalidAPIUsage('Указано недопустимое имя для короткой ссылки')
     return jsonify(url_map.to_dict()), HTTPStatus.CREATED

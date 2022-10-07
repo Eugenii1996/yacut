@@ -13,10 +13,7 @@ def index_view():
     original = form.original_link.data
     if original == '' or original is None:
         raise ValueError('Отсутствует URL!')
-    if 'custom_id' in form.data:
-        url_map = URL_map.create_short_url(original, form.custom_id.data)
-    else:
-        url_map = URL_map.create_short_url(original)
+    url_map = URL_map.create_short_url(original, form.data.get('custom_id'))
     return render_template('index.html', form=form, url_map=url_map)
 
 
